@@ -693,12 +693,23 @@ test_specificity = []
 test_auc_ci_lower = []
 test_auc_ci_upper = []
 
+patience = 10
+min_delta = 0.001
+best_val_loss = float('inf')
+counter = 0
+early_stop = False
+
 for epoch in range(epochs):
+    if early_stop:
+        print("早停机制触发，终止训练")
+        break
+
     epoch_train_loss, epoch_train_acc, epoch_train_auc, epoch_train_FPR, epoch_train_TPR, epoch_train_P, epoch_train_f1, epoch_train_sensitivity, epoch_train_specificity, epoch_train_auc_ci_lower, epoch_train_auc_ci_upper, \
         epoch_val_loss, epoch_val_acc, epoch_val_auc, epoch_val_FPR, epoch_val_TPR, epoch_val_P, epoch_val_f1, epoch_val_sensitivity, epoch_val_specificity, epoch_val_auc_ci_lower, epoch_val_auc_ci_upper, \
         epoch_test_loss, epoch_test_acc, epoch_test_auc, epoch_test_FPR, epoch_test_TPR, epoch_test_P, epoch_test_f1, epoch_test_sensitivity, epoch_test_specificity, epoch_test_auc_ci_lower, epoch_test_auc_ci_upper, \
         best_epoch, best_auc = fit(epoch, model, train_dataloader, val_dataloader, test_dataloader, best_epoch,
                                    best_auc)
+
 
     train_loss.append(epoch_train_loss)
     train_acc.append(epoch_train_acc)
@@ -735,6 +746,21 @@ for epoch in range(epochs):
     test_specificity.append(epoch_test_specificity)
     test_auc_ci_lower.append(epoch_test_auc_ci_lower)
     test_auc_ci_upper.append(epoch_test_auc_ci_upper)
+
+    current_val_loss = val_loss[-1]  # 获取最新一次验证损失
+
+    if current_val_loss < best_val_loss - min_delta:
+        best_val_loss = current_val_loss
+        counter = 0
+    else:
+        counter += 1
+        print(f'早停计数器: {counter} / {patience}')
+
+    if counter >= patience:
+        print(f'验证损失在最近 {patience} 轮内无显著下降，训练终止')
+        early_stop = True
+
+
 
 print('best_epoch: ', best_epoch,
       'train_loss： ', round(train_loss[best_epoch], 3),
